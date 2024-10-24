@@ -1,6 +1,5 @@
 import random
-from WOA2 import text_speed
-from WOA2 import lista_personajes
+from resources import text_speed
 
 class Personaje:
     def __init__(self, nombre, titulo, clan = None):
@@ -10,24 +9,49 @@ class Personaje:
 
     def asignar_clan(self, clan):
         self.clan = clan
-
+        
     def realizar_ataque(self, objetivo):
-        f"{self.nombre} has carried out an attack!"
-        damage = ((self.fuerza + self.ataque) / ((self.vida_original-self.puntos_vida) + self.vida_original)) / 10
-        objetivo.recibir_ataque(damage)
+        print(f"{self.nombre} has carried out an attack!")
+        # 1. Calculamos el poder del ataque usando solo fuerza y ataque del atacante
+        poder_ataque = (self.fuerza + self.ataque)
+        
+        # 2. Calculamos el poder de la defensa usando solo fuerza y defensa del objetivo
+        poder_defensa = (objetivo.fuerza + objetivo.defensa)
+        
+        # 3. Calculamos la diferencia de poder
+        diferencia_poder = poder_ataque - poder_defensa
+        
+        # 4. Calculamos el porcentaje de daño base
+        if diferencia_poder > 0:
+            # Si el ataque es más fuerte que la defensa
+            factor_ataque = 5 + (diferencia_poder * 0.5)  # 0.5% por cada punto de diferencia
+        else:
+            # Si la defensa es más fuerte o igual que el ataque
+            factor_ataque = 5  # Daño mínimo del 5%
+        # 6. Calculamos el daño final
+        damage = int((objetivo.vida_original * factor_ataque) / 100)
+        estado=objetivo.recibir_ataque(damage)
+        return estado
+
 
     def recibir_ataque(self, damage):
-        f"{self.nombre}has received damage!"
-        factor_damage = (self.defensa * damage) / 100
-        self.fuerza = round((self.fuerza )/ (factor_damage + 1))
-        self.puntos_vida = round((self.puntos_vida) / (factor_damage + 1))
-        self.defensa = round((self.defensa) / (factor_damage + 1))
-        self.ataque = round((self.ataque) / (factor_damage + 1))
-
+        # print("damage :", damage)
+        self.puntos_vida = max(0, self.puntos_vida - damage)
+        #calculamos el porcentaje de vida resultante
+        porcentaje_vida = self.puntos_vida / self.vida_original
+        # print(f"{porcentaje_vida} = {self.puntos_vida} / {self.vida_original}")
+        # Los atributos se disminuyen proporcionalmente a la vida perdida
+        self.fuerza = max(1,int(self.fuerza_original * porcentaje_vida))
+        self.defensa = max(1,int(self.defensa_original * porcentaje_vida))
+        self.ataque = max(1,int(self.ataque_original * porcentaje_vida))
+        # print(f"fuerza {self.fuerza} - defensa {self.defensa} - ataque {self.ataque}")
         if self.puntos_vida > 0:
             print(f"{self.nombre} has received an attack hit points = {self.puntos_vida}")
+            return 1 #live
         else:
             print(f"The {self.titulo} {self.nombre} has died")
+            return 0 #death
+                   
     
     # APLICANDO EFECTO DE ATAQUE FLECHA VENENOSA AL OBJETIVO
     
@@ -70,7 +94,11 @@ class Guerrero(Personaje):
         self.puntos_vida = 100
         self.defensa = 90
         self.ataque = 100
-        self.vida_original = self.puntos_vida
+        # Guardamos los valores máximos/iniciales de cada atributo
+        self.fuerza_original = self.fuerza
+        self.vida_original = self.puntos_vida        
+        self.defensa_original = self.defensa
+        self.ataque_original = self.ataque
         
 #***********************************************************************
 
@@ -81,7 +109,11 @@ class Mago(Personaje):
         self.puntos_vida = 100
         self.defensa = 80
         self.ataque = 90
-        self.vida_original = self.puntos_vida
+        # Guardamos los valores máximos/iniciales de cada atributo
+        self.fuerza_original = self.fuerza
+        self.vida_original = self.puntos_vida        
+        self.defensa_original = self.defensa
+        self.ataque_original = self.ataque
 
 #***********************************************************************
 
@@ -92,6 +124,11 @@ class Arquero(Personaje):
         self.puntos_vida = 100
         self.defensa = 80
         self.ataque = 120
+        # Guardamos los valores máximos/iniciales de cada atributo
+        self.fuerza_original = self.fuerza
+        self.vida_original = self.puntos_vida        
+        self.defensa_original = self.defensa
+        self.ataque_original = self.ataque
         self.vida_original = self.puntos_vida
     
     def flecha_venenosa(self, objetivo ):
@@ -114,25 +151,30 @@ class Arquero(Personaje):
 #***********************************************************************
 
 class Fundador(Mago):
+    cont_pociones = 0
     def __init__(self, nombre):
         super().__init__(nombre, "Founder")
         self.fuerza = 100
         self.puntos_vida = 110
         self.defensa = 110
         self.ataque = 110
-        self.vida_original = self.puntos_vida
+        # Guardamos los valores máximos/iniciales de cada atributo
+        self.fuerza_original = self.fuerza
+        self.vida_original = self.puntos_vida        
+        self.defensa_original = self.defensa
+        self.ataque_original = self.ataque
         self.slot_pociones = []
         text_speed(f"{self.nombre} has founded a clan.")
-       
         
     def crear_pociones(self):
         cura_aleatoria = random.randint(10, 25)
         if len(self.slot_pociones) < 3:
             self.slot_pociones.append(cura_aleatoria)
+            self.cont_pociones += 1#Se aumenta el contador de las pociones
             for pocion in self.slot_pociones:
-                text_speed(f"{self.nombre} 🧙‍♂️ Potions: ({list(self.slot_pociones)} 🥤| Healing: {pocion} 💗)")
+                text_speed(f"{self.nombre} 🧙‍♂️🧙‍♀️ Potions: ({self.cont_pociones} 🥤| Healing: {pocion} 💗)")
         else:
-            text_speed(f"Oops! You can´t have more than 3 potions in your pockets 🥤! {list(self.slot_pociones)}")
+            text_speed(f"Oops! You can´t have more than 3 potions in your pockets 🥤! {list(self.cont_pociones)}")
 
     def conceder_curacion(self, lst_pjs, pj_receptor):
         for index, pj in enumerate(lst_pjs):
@@ -142,11 +184,13 @@ class Fundador(Mago):
             pj_receptor = lst_pjs[opc]#EN LA POSICIÓN QUE SE ELIGIÓ EN LA OPC
             self.pj_receptor = pj_receptor#PJ COMO UN OBJETO
             curacion = self.slot_pociones.pop()#SACA LA POCIÓN DEL BOLSILLO
-            text_speed(f"{self.nombre} has using a healing potion 🥤! in {self.pj_receptor.nombre}")
+            self.cont_pociones -= 1
+            text_speed(f"{self.nombre} has using a healing potion 🥤 in {self.pj_receptor.nombre}")
             pj_receptor.fuerza += curacion
             pj_receptor.puntos_vida += curacion
             pj_receptor.defensa += curacion
             pj_receptor.ataque += curacion
+            input("Press ENTER to continue! ")
         else:
             text_speed(f"That character does´nt even exist!")
         return pj_receptor
